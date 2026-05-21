@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OBIA WebGIS Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style> body { margin: 0; padding: 0; } #map { width: 100vw; height: 100vh; } </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19, attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        fetch('data.geojson')
+            .then(res => res.json())
+            .then(data => {
+                var geojsonLayer = L.geoJSON(data, {
+                    style: function (feature) {
+                        return {color: "#ff7800", weight: 1, fillOpacity: 0.5};
+                    },
+                    onEachFeature: function (feature, layer) {
+                        if (feature.properties) {
+                            var popupContent = "<table>";
+                            for (var p in feature.properties) {
+                                popupContent += "<tr><td><b>" + p + "</b></td><td>" + feature.properties[p] + "</td></tr>";
+                            }
+                            popupContent += "</table>";
+                            layer.bindPopup(popupContent);
+                        }
+                    }
+                }).addTo(map);
+                map.fitBounds(geojsonLayer.getBounds());
+            });
+    </script>
+</body>
+</html>
