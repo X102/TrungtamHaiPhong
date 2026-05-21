@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Professional WebGIS - Merged_Final_Result</title>
+    <title>OBIA Land Cover Classification</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -12,74 +12,124 @@
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
     <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; } 
-        #map { width: 100vw; height: 100vh; }
-        .legend { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); line-height: 1.5em; }
-        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; } 
+        #sidebar { width: 320px; height: 100vh; background: #2c3e50; color: white; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        #map { flex-grow: 1; height: 100vh; }
+        h2 { margin-top: 0; font-size: 1.2em; border-bottom: 1px solid #34495e; padding-bottom: 10px; }
+        .info-box { background: #34495e; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9em; }
+        .legend-item { margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        .color-picker { border: none; width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: 3px; }
+        .btn-toggle { width: 100%; padding: 8px; margin-top: 10px; background: #3498db; border: none; color: white; cursor: pointer; border-radius: 3px; font-weight: bold; }
+        .btn-toggle:hover { background: #2980b9; }
     </style>
 </head>
 <body>
+    <div id="sidebar">
+        <h2>🗺️ Map Information</h2>
+        <div class="info-box">
+            <b>Title:</b> OBIA Land Cover Classification<br><br>
+            <b>Author:</b> Researcher Pham Dang Hien<br>
+            <b>Contact:</b> contact@example.com<br><br>
+            <i>Interactive OBIA Classification Result. Click on polygons to view metadata.</i>
+        </div>
+        
+        <h2>🎨 Layer Styling</h2>
+        <div id="style-controls"></div>
+        
+        <h2>⚙️ Map Controls</h2>
+        <button class="btn-toggle" onclick="toggleGraticule()">Toggle Grid (Graticule)</button>
+        <button class="btn-toggle" onclick="toggleLayer()">Turn Layer On/Off</button>
+    </div>
+
     <div id="map"></div>
+
     <script>
         var map = L.map('map').setView([0, 0], 2);
         
-        // --- Basemap Switcher ---
-        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' });
-        var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
-        var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' });
+        // Basemaps (Fixed Esri URL)
+        var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 });
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 });
+        var dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB' });
         
-        map.addLayer(satellite);
-        var baseMaps = { "Satellite": satellite, "Street Map": osm, "Topo Map": topo };
-        L.control.layers(baseMaps).addTo(map);
+        satellite.addTo(map); // Default
+        L.control.layers({ "Satellite": satellite, "OSM Streets": osm, "Dark Canvas": dark }).addTo(map);
 
-        // --- Tools ---
+        // Tools
         L.Control.geocoder().addTo(map);
-        L.control.measure({ primaryLengthUnit: 'meters', secondaryLengthUnit: 'kilometers', primaryAreaUnit: 'sqmeters', secondaryAreaUnit: 'hectares' }).addTo(map);
+        L.control.measure({ primaryLengthUnit: 'meters', secondaryAreaUnit: 'hectares' }).addTo(map);
 
-        var colorMap = {"water1987": "#fd0e9f", "Baren1987": "#f67454", "Ruong1987": "#500e4a", "Forest1987": "#f94627", "Lake1987": "#5eb26c", "City1987": "#bef971", "Agriculture1987": "#bd44d8"};
+        // Simple Custom Graticule (Lưới tọa độ)
+        var graticuleLayer = L.layerGroup();
+        for (var lat = -90; lat <= 90; lat += 10) { L.polyline([[lat, -180], [lat, 180]], {color: '#fff', weight: 1, opacity: 0.3, dashArray: '5, 5'}).addTo(graticuleLayer); }
+        for (var lng = -180; lng <= 180; lng += 10) { L.polyline([[-90, lng], [90, lng]], {color: '#fff', weight: 1, opacity: 0.3, dashArray: '5, 5'}).addTo(graticuleLayer); }
+        
+        function toggleGraticule() {
+            if (map.hasLayer(graticuleLayer)) map.removeLayer(graticuleLayer);
+            else map.addLayer(graticuleLayer);
+        }
+
+        // Data & Styling
+        var colorMap = {"water1987": "#4CAF50", "Baren1987": "#2196F3", "Ruong1987": "#F44336", "Forest1987": "#FF9800", "Lake1987": "#9C27B0", "City1987": "#795548", "Agriculture1987": "#00BCD4"};
         var fldName = "Class";
+        var geojsonLayer;
+        var layerVisible = true;
 
-        // --- Load GeoJSON Data ---
-        fetch('data.geojson')
-            .then(res => res.json())
-            .then(data => {
-                var geojsonLayer = L.geoJSON(data, {
-                    style: function (feature) {
-                        var cVal = fldName ? feature.properties[fldName] : "Default";
-                        return { color: "white", weight: 1, fillColor: colorMap[cVal] || "#3388ff", fillOpacity: 0.6 };
-                    },
-                    onEachFeature: function (feature, layer) {
-                        // Hiệu ứng Hover
-                        layer.on({
-                            mouseover: function(e) { var layer = e.target; layer.setStyle({ weight: 3, color: '#ffeb3b', fillOpacity: 0.9 }); layer.bringToFront(); },
-                            mouseout: function(e) { geojsonLayer.resetStyle(e.target); }
-                        });
-                        
-                        // Popup Click
-                        if (feature.properties) {
-                            var popupContent = "<h4 style='margin:0 0 5px 0;'>Chi tiết Hình học</h4><table border='1' style='border-collapse: collapse; width: 100%;'>";
-                            for (var p in feature.properties) {
-                                popupContent += "<tr><td style='padding: 3px;'><b>" + p + "</b></td><td style='padding: 3px;'>" + feature.properties[p] + "</td></tr>";
-                            }
-                            popupContent += "</table>";
-                            layer.bindPopup(popupContent);
+        function styleFeature(feature) {
+            var cVal = fldName ? feature.properties[fldName] : "Default";
+            return { color: "#ffffff", weight: 1, fillColor: colorMap[cVal] || "#3388ff", fillOpacity: 0.7 };
+        }
+
+        fetch('data.geojson').then(res => res.json()).then(data => {
+            geojsonLayer = L.geoJSON(data, {
+                style: styleFeature,
+                onEachFeature: function (feature, layer) {
+                    layer.on({
+                        mouseover: function(e) { e.target.setStyle({ weight: 3, color: '#ffeb3b', fillOpacity: 0.9 }); e.target.bringToFront(); },
+                        mouseout: function(e) { geojsonLayer.resetStyle(e.target); }
+                    });
+                    
+                    if (feature.properties) {
+                        var popup = "<h3>Feature Details</h3><table style='width:100%; border-collapse: collapse;' border='1'>";
+                        for (var p in feature.properties) {
+                            popup += "<tr><td style='padding:4px;'><b>" + p + "</b></td><td style='padding:4px;'>" + feature.properties[p] + "</td></tr>";
                         }
+                        layer.bindPopup(popup + "</table>");
                     }
-                }).addTo(map);
-                map.fitBounds(geojsonLayer.getBounds());
-            });
+                }
+            }).addTo(map);
+            map.fitBounds(geojsonLayer.getBounds());
+            buildColorPickers();
+        });
 
-        // --- Legend ---
-        var legend = L.control({position: 'bottomright'});
-        legend.onAdd = function (map) {
-            var div = L.DomUtil.create('div', 'info legend');
-            div.innerHTML += '<h4>Bảng Chú Giải</h4>';
+        function toggleLayer() {
+            if (layerVisible) map.removeLayer(geojsonLayer);
+            else map.addLayer(geojsonLayer);
+            layerVisible = !layerVisible;
+        }
+
+        function buildColorPickers() {
+            var container = document.getElementById('style-controls');
             for (var key in colorMap) {
-                div.innerHTML += '<i style="background:' + colorMap[key] + '"></i> ' + key + '<br>';
+                var div = document.createElement('div');
+                div.className = 'legend-item';
+                div.innerHTML = "<span>" + key + "</span>";
+                
+                var input = document.createElement('input');
+                input.type = 'color';
+                input.className = 'color-picker';
+                input.value = colorMap[key];
+                input.setAttribute('data-class', key);
+                
+                input.addEventListener('change', function(e) {
+                    var targetClass = e.target.getAttribute('data-class');
+                    colorMap[targetClass] = e.target.value;
+                    geojsonLayer.setStyle(styleFeature);
+                });
+                
+                div.appendChild(input);
+                container.appendChild(div);
             }
-            return div;
-        };
-        legend.addTo(map);
+        }
     </script>
 </body>
 </html>
