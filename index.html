@@ -1,33 +1,65 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OBIA WebGIS Map</title>
+    <title>Professional WebGIS - Merged_Final_Result</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style> body { margin: 0; padding: 0; } #map { width: 100vw; height: 100vh; } </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+    <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; } 
+        #map { width: 100vw; height: 100vh; }
+        .legend { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); line-height: 1.5em; }
+        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+    </style>
 </head>
 <body>
     <div id="map"></div>
     <script>
         var map = L.map('map').setView([0, 0], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19, attribution: '© OpenStreetMap'
-        }).addTo(map);
+        
+        // --- Basemap Switcher ---
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' });
+        var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+        var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' });
+        
+        map.addLayer(satellite);
+        var baseMaps = { "Satellite": satellite, "Street Map": osm, "Topo Map": topo };
+        L.control.layers(baseMaps).addTo(map);
 
+        // --- Tools ---
+        L.Control.geocoder().addTo(map);
+        L.control.measure({ primaryLengthUnit: 'meters', secondaryLengthUnit: 'kilometers', primaryAreaUnit: 'sqmeters', secondaryAreaUnit: 'hectares' }).addTo(map);
+
+        var colorMap = {"water1987": "#fd0e9f", "Baren1987": "#f67454", "Ruong1987": "#500e4a", "Forest1987": "#f94627", "Lake1987": "#5eb26c", "City1987": "#bef971", "Agriculture1987": "#bd44d8"};
+        var fldName = "Class";
+
+        // --- Load GeoJSON Data ---
         fetch('data.geojson')
             .then(res => res.json())
             .then(data => {
                 var geojsonLayer = L.geoJSON(data, {
                     style: function (feature) {
-                        return {color: "#ff7800", weight: 1, fillOpacity: 0.5};
+                        var cVal = fldName ? feature.properties[fldName] : "Default";
+                        return { color: "white", weight: 1, fillColor: colorMap[cVal] || "#3388ff", fillOpacity: 0.6 };
                     },
                     onEachFeature: function (feature, layer) {
+                        // Hiệu ứng Hover
+                        layer.on({
+                            mouseover: function(e) { var layer = e.target; layer.setStyle({ weight: 3, color: '#ffeb3b', fillOpacity: 0.9 }); layer.bringToFront(); },
+                            mouseout: function(e) { geojsonLayer.resetStyle(e.target); }
+                        });
+                        
+                        // Popup Click
                         if (feature.properties) {
-                            var popupContent = "<table>";
+                            var popupContent = "<h4 style='margin:0 0 5px 0;'>Chi tiết Hình học</h4><table border='1' style='border-collapse: collapse; width: 100%;'>";
                             for (var p in feature.properties) {
-                                popupContent += "<tr><td><b>" + p + "</b></td><td>" + feature.properties[p] + "</td></tr>";
+                                popupContent += "<tr><td style='padding: 3px;'><b>" + p + "</b></td><td style='padding: 3px;'>" + feature.properties[p] + "</td></tr>";
                             }
                             popupContent += "</table>";
                             layer.bindPopup(popupContent);
@@ -36,6 +68,18 @@
                 }).addTo(map);
                 map.fitBounds(geojsonLayer.getBounds());
             });
+
+        // --- Legend ---
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML += '<h4>Bảng Chú Giải</h4>';
+            for (var key in colorMap) {
+                div.innerHTML += '<i style="background:' + colorMap[key] + '"></i> ' + key + '<br>';
+            }
+            return div;
+        };
+        legend.addTo(map);
     </script>
 </body>
 </html>
