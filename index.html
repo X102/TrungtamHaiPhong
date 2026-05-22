@@ -1,52 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Auto-Sync Cloud WebGIS</title>
+    <title>Professional Cloud WebGIS</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
-    <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/gokertanrisever/leaflet-ruler@master/src/leaflet-ruler.css">
+    <script src="https://cdn.jsdelivr.net/gh/gokertanrisever/leaflet-ruler@master/src/leaflet-ruler.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side/leaflet-side-by-side.min.js"></script>
-    <script src="https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js"></script>
+    
     <style>
         body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; display: flex; height: 100vh; overflow: hidden; background: #1e1e1e; }
         #map { flex-grow: 1; height: 100%; z-index: 1; }
-        #sidebar { width: 350px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
+        #sidebar { width: 380px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
         .sidebar-header { padding: 15px; background: #1a252f; display: flex; justify-content: space-between; align-items: center; }
         .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
-        .section-title { font-size: 1.1em; border-bottom: 2px solid #34495e; padding-bottom: 5px; margin: 20px 0 10px 0; color: #3498db; }
+        .section-title { font-size: 1.1em; border-bottom: 2px solid #34495e; padding-bottom: 5px; margin: 20px 0 10px 0; color: #3498db; font-weight: bold; }
+        
         .info-card { background: #34495e; padding: 15px; border-radius: 8px; font-size: 0.9em; }
         .layer-group { background: #34495e; margin-bottom: 10px; border-radius: 6px; overflow: hidden; }
-        .layer-title { background: #2c3e50; padding: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #1a252f; }
-        .class-item { padding: 8px 10px; display: flex; justify-content: space-between; font-size: 0.85em; border-bottom: 1px solid #2c3e50; }
-        .color-btn { width: 20px; height: 20px; border: 2px solid #ecf0f1; border-radius: 50%; cursor: pointer; padding: 0; }
-        .stat-badge { background: #1abc9c; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.8em; margin-left: 5px; }
-        .control-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .btn-action { flex: 1; background: #3498db; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-        .leaflet-popup-content-wrapper { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); box-shadow: 0 3px 14px rgba(0,0,0,0.4); }
+        .layer-title { background: #2c3e50; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1a252f; }
+        .class-item { padding: 8px 10px 8px 30px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; border-bottom: 1px solid #2c3e50; background: #2f4356; }
+        
+        .stat-badge { background: #1abc9c; color: white; padding: 3px 6px; border-radius: 4px; font-size: 0.8em; margin-left: 5px; }
+        .control-row { display: flex; justify-content: space-between; margin-bottom: 10px; gap: 5px; }
+        .btn-action { flex: 1; background: #3498db; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-action:hover { background: #2980b9; }
+        
+        /* Swipe UI Styling */
+        .swipe-box { background: #1a252f; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #9b59b6; }
+        .swipe-select { width: 100%; padding: 5px; margin-bottom: 10px; background: #34495e; color: white; border: 1px solid #7f8c8d; border-radius: 4px; }
+        
+        /* Popup Styling */
+        .leaflet-popup-content-wrapper { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); box-shadow: 0 3px 14px rgba(0,0,0,0.4); border-radius: 6px; }
+        .leaflet-popup-content table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .leaflet-popup-content th, .leaflet-popup-content td { border: 1px solid #ddd; padding: 6px; font-size: 12px; }
+        .leaflet-popup-content th { background-color: #f2f2f2; text-align: left; color: #333; }
+        .popup-title { font-size: 14px; font-weight: bold; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 4px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
     <div id="sidebar">
-        <div class="sidebar-header"><h3 style="margin: 0;" id="w-title">Tải dữ liệu Cloud...</h3></div>
+        <div class="sidebar-header"><h3 style="margin: 0;" id="w-title">Fetching Cloud Data...</h3></div>
         <div class="sidebar-content">
             <div class="info-card">
-                <b>Trạng thái:</b> <span id="sync-status" style="color:#2ecc71;">Đang đồng bộ API...</span><br>
-                <i>Hệ thống tự động tải các file GeoJSON trực tiếp từ Hugging Face Dataset.</i>
+                <b>Status:</b> <span id="sync-status" style="color:#2ecc71;">Connecting to API...</span><br>
+                <i>System automatically synchronizes GeoJSON files from Cloud.</i>
             </div>
-            <div class="section-title"><i class="fas fa-layer-group"></i> Tools & Views</div>
+            
+            <div class="section-title"><i class="fas fa-columns"></i> Swipe & Compare Mode</div>
+            <div class="swipe-box">
+                <label style="font-size: 0.85em;">Left Map:</label>
+                <select id="swipe-left" class="swipe-select"><option value="">-- Select Layer --</option></select>
+                <label style="font-size: 0.85em;">Right Map:</label>
+                <select id="swipe-right" class="swipe-select"><option value="">-- Select Layer --</option></select>
+                <button class="btn-action" id="btn-swipe" onclick="toggleSwipe()" style="background:#9b59b6; width: 100%;">Activate Swipe Mode</button>
+            </div>
+
+            <div class="section-title"><i class="fas fa-layer-group"></i> Layer Management</div>
             <div class="control-row">
                 <button class="btn-action" onclick="toggleAllLayers(true)">Show All</button>
                 <button class="btn-action" onclick="toggleAllLayers(false)">Hide All</button>
+                <button class="btn-action" onclick="map.fitBounds(globalBounds)" style="background:#e67e22;">Zoom Fit</button>
             </div>
-            <div class="control-row">
-                <button class="btn-action" id="btn-swipe" onclick="enableSwipe()" style="background:#9b59b6;"><i class="fas fa-columns"></i> Swipe Mode</button>
-            </div>
-            <div class="section-title"><i class="fas fa-list"></i> Auto-Synced Layers</div>
             <div id="layer-container"></div>
         </div>
     </div>
@@ -55,192 +77,225 @@
     <script>
         const HF_REPO = "lopmaybay/lulcHaiPhongCity";
         
-        var map = L.map('map').setView([20, 105], 5);
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
-        L.control.measure({ primaryLengthUnit: 'meters', secondaryAreaUnit: 'hectares' }).addTo(map);
+        // --- 4. TÍCH HỢP BẢN ĐỒ NỀN ĐA DẠNG ---
+        var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google' });
+        var googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google' });
+        var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, attribution: 'CartoDB' });
+        
+        var map = L.map('map', { layers: [googleSat], worldCopyJump: true }).setView([20, 105], 5);
+        L.control.layers({ "Google Satellite": googleSat, "Google Streets": googleStreets, "Dark Canvas": cartoDark }).addTo(map);
+        
+        // Công cụ đo chính xác (Leaflet Ruler)
+        L.control.ruler({ position: 'topright', lengthUnit: { display: 'm', decimal: 2 }, areaUnit: { display: 'ha', decimal: 4 } }).addTo(map);
 
         var loadedLayers = {};
         var globalBounds = L.latLngBounds();
         var swipeControl = null;
-        var layerGroupCollection = L.featureGroup().addTo(map);
 
-        // Bảng màu thông minh tự động cấp phát cho Class mới
-        const stdColors = ["#4CAF50", "#2196F3", "#F44336", "#FF9800", "#9C27B0", "#00BCD4", "#E91E63", "#CDDC39", "#8BC34A", "#795548"];
-        var colorIndex = 0;
-        var globalColorMap = {};
-
+        // --- 2. THUẬT TOÁN HASH COLOR (Đồng bộ màu các class giống nhau giữa các năm) ---
+        function hashCode(str) {
+            var hash = 0; for (var i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            return hash;
+        }
         function getColor(className) {
-            if (!className) return "#3388ff";
-            if (!globalColorMap[className]) {
-                globalColorMap[className] = stdColors[colorIndex % stdColors.length];
-                colorIndex++;
-            }
-            return globalColorMap[className];
+            if (!className || className === "Unclassified") return "#7f8c8d";
+            const colors = ["#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#fffac8", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075", "#a9a9a9"];
+            return colors[Math.abs(hashCode(className)) % colors.length];
         }
 
-        // Thuật toán quét API Hugging Face
         async function fetchHuggingFaceData() {
             try {
                 const apiRes = await fetch(`https://huggingface.co/api/datasets/${HF_REPO}/tree/main`);
                 const files = await apiRes.json();
-                
-                // Lọc chỉ lấy các file GeoJSON
                 const geojsonFiles = files.filter(f => f.path.endsWith('.geojson') || f.path.endsWith('.json'));
                 
                 if(geojsonFiles.length === 0) {
-                    document.getElementById('sync-status').innerText = "Không tìm thấy file GeoJSON nào!";
-                    document.getElementById('sync-status').style.color = "#e74c3c";
-                    return;
+                    document.getElementById('sync-status').innerText = "No GeoJSON files found!";
+                    document.getElementById('sync-status').style.color = "#e74c3c"; return;
                 }
-
-                document.getElementById('sync-status').innerText = `Đã tìm thấy ${geojsonFiles.length} Layers!`;
+                document.getElementById('sync-status').innerText = `${geojsonFiles.length} Layers Found & Synced!`;
                 
                 for (let file of geojsonFiles) {
                     const rawUrl = `https://huggingface.co/datasets/${HF_REPO}/resolve/main/${file.path}`;
-                    const layerName = file.path.replace('.geojson', '').replace('.json', '');
+                    // Tên layer sạch đẹp
+                    const layerName = file.path.replace('.geojson', '').replace('.json', '').replace(/_/g, ' ');
                     await processLayer(rawUrl, layerName);
                 }
-                
                 map.fitBounds(globalBounds);
-                document.getElementById('w-title').innerText = "Cloud WebGIS Dashboard";
-
+                document.getElementById('w-title').innerText = "WebGIS Dashboard";
             } catch(e) {
-                console.error(e);
-                document.getElementById('sync-status').innerText = "Lỗi kết nối API Hugging Face!";
+                document.getElementById('sync-status').innerText = "API Connection Failed!";
                 document.getElementById('sync-status').style.color = "#e74c3c";
             }
         }
 
-        // Xử lý và vẽ từng Layer
-        async function processLayer(url, name) {
+        async function processLayer(url, layerName) {
             const res = await fetch(url);
             const data = await res.json();
             
-            // Tự động dò tìm Cột Tên Class
             let fieldName = null;
             if (data.features.length > 0) {
-                const props = data.features[0].properties;
                 const candidates = ["Class_Name", "MacroClass", "Class", "Name", "Ten"];
-                for (let c of candidates) { if (props[c] !== undefined) { fieldName = c; break; } }
+                for (let c of candidates) { if (data.features[0].properties[c] !== undefined) { fieldName = c; break; } }
             }
 
-            // Tính thống kê
-            var stats = { total_feat: 0, total_area: 0, classes: {} };
+            // Tách Features theo từng Class để có thể bật tắt riêng lẻ
+            var classFeatures = {};
+            var stats = { total_area: 0 };
+            
             data.features.forEach(f => {
-                stats.total_feat++;
                 var area = f.properties.Area_ha || 0;
                 stats.total_area += area;
-                var cVal = fieldName ? f.properties[fieldName] : "Polygon";
-                if (!stats.classes[cVal]) stats.classes[cVal] = { count: 0, area: 0 };
-                stats.classes[cVal].count++;
-                stats.classes[cVal].area += area;
+                var cVal = fieldName ? f.properties[fieldName] : "Unclassified";
+                
+                if (!classFeatures[cVal]) classFeatures[cVal] = { area: 0, count: 0, features: [] };
+                classFeatures[cVal].features.push(f);
+                classFeatures[cVal].area += area;
+                classFeatures[cVal].count++;
             });
 
-            var geoLayer = L.geoJSON(data, {
-                style: function(f) {
-                    var cVal = fieldName ? f.properties[fieldName] : null;
-                    return { color: "#fff", weight: 0.5, fillColor: getColor(cVal), fillOpacity: 0.8 };
-                },
-                onEachFeature: function(f, layer) {
-                    layer._sourceLayerName = name;
-                    layer.on('mouseover', e => e.target.setStyle({ weight: 3, color: '#f39c12' }));
-                    layer.on('mouseout', e => geoLayer.resetStyle(e.target));
-                }
+            var mainLayerGroup = L.layerGroup();
+            var classLeafletLayers = {};
+
+            Object.keys(classFeatures).forEach(c => {
+                var cLayer = L.geoJSON(classFeatures[c].features, {
+                    style: function() { return { color: "#fff", weight: 0.5, fillColor: getColor(c), fillOpacity: 0.8 }; },
+                    onEachFeature: function(f, layer) {
+                        // --- 1. HIỆN THÔNG TIN POPUP CHUẨN ---
+                        let popupHTML = `<div class='popup-title'>Class: ${c}</div><table>`;
+                        for(let p in f.properties) popupHTML += `<tr><th>${p}</th><td>${f.properties[p]}</td></tr>`;
+                        popupHTML += "</table>";
+                        layer.bindPopup(popupHTML);
+                        
+                        layer.on('mouseover', function(e) { this.setStyle({weight: 3, color: '#f39c12'}); });
+                        layer.on('mouseout', function(e) { cLayer.resetStyle(this); });
+                    }
+                });
+                classLeafletLayers[c] = cLayer;
+                mainLayerGroup.addLayer(cLayer);
             });
 
-            layerGroupCollection.addLayer(geoLayer);
-            loadedLayers[name] = { layer: geoLayer, stats: stats, field: fieldName };
-            globalBounds.extend(geoLayer.getBounds());
-            buildLayerUI(name);
+            mainLayerGroup.addTo(map);
+            globalBounds.extend(L.geoJSON(data).getBounds());
+
+            loadedLayers[layerName] = { mainGroup: mainLayerGroup, classLayers: classLeafletLayers };
+            
+            // Thêm vào UI & Swipe Dropdowns
+            buildLayerUI(layerName, classFeatures, stats.total_area);
+            updateSwipeDropdowns(layerName);
         }
 
-        // Popup Xuyên Layer
-        map.on('click', function(e) {
-            var results = leafletPip.pointInLayer(e.latlng, layerGroupCollection);
-            if (results.length > 0) {
-                var html = "<div style='max-height: 250px; overflow-y: auto;'>";
-                results.forEach(res => {
-                    html += `<b>${res._sourceLayerName || "Layer"}</b><table border='1' style='width:100%; border-collapse:collapse; margin-bottom:10px;'>`;
-                    for (var p in res.feature.properties) { 
-                        html += `<tr><td style='padding:4px; font-size:11px;'>${p}</td><td style='padding:4px; font-size:11px;'>${res.feature.properties[p]}</td></tr>`; 
-                    }
-                    html += "</table>";
-                });
-                L.popup().setLatLng(e.latlng).setContent(html + "</div>").openOn(map);
-            }
-        });
-
-        // Giao diện Sidebar
-        function buildLayerUI(name) {
-            var lObj = loadedLayers[name];
+        // --- 3. GIAO DIỆN BẬT TẮT TỪNG CLASS ---
+        function buildLayerUI(layerName, classFeatures, totalArea) {
             var container = document.getElementById('layer-container');
             var grp = document.createElement('div');
             grp.className = 'layer-group';
             
-            grp.innerHTML = `
+            var safeId = layerName.replace(/\s+/g, '-');
+            
+            let html = `
                 <div class="layer-title">
                     <div>
-                        <input type="checkbox" checked onchange="toggleSingleLayer('${name}', this.checked)" style="vertical-align:middle;">
-                        <b style="cursor:pointer;" onclick="map.fitBounds(loadedLayers['${name}'].layer.getBounds())">${name}</b>
+                        <input type="checkbox" id="chk-${safeId}" checked onchange="toggleLayer('${layerName}', this.checked)" style="vertical-align:middle;">
+                        <b style="cursor:pointer;" onclick="zoomToLayer('${layerName}')">${layerName}</b>
                     </div>
-                    <div><span class="stat-badge">${lObj.stats.total_area.toFixed(1)} ha</span></div>
+                    <div><span class="stat-badge">${totalArea.toFixed(1)} ha</span></div>
                 </div>
+                <div id="list-${safeId}">
             `;
-            var cList = document.createElement('div');
-            for (var c in lObj.stats.classes) {
-                var cStat = lObj.stats.classes[c];
-                cList.innerHTML += `
+            
+            Object.keys(classFeatures).forEach(c => {
+                let cArea = classFeatures[c].area;
+                html += `
                     <div class="class-item">
                         <div>
-                            <input type="color" class="color-btn" value="${getColor(c)}" onchange="changeColor('${c}', this.value)" style="margin-right:8px;">
+                            <input type="checkbox" checked onchange="toggleClass('${layerName}', '${c}', this.checked)" style="vertical-align:middle;">
+                            <span style="display:inline-block; width:12px; height:12px; background:${getColor(c)}; border-radius:50%; margin:0 5px;"></span>
                             ${c}
                         </div>
-                        <div><span class="stat-badge" style="background:none; border:1px solid #1abc9c; color:#1abc9c;">${cStat.area.toFixed(1)} ha</span></div>
+                        <span class="stat-badge" style="background:none; border:1px solid #1abc9c; color:#1abc9c;">${cArea.toFixed(1)} ha</span>
                     </div>`;
-            }
-            grp.appendChild(cList);
+            });
+            html += `</div>`;
+            grp.innerHTML = html;
             container.appendChild(grp);
         }
 
-        function changeColor(className, hexColor) {
-            globalColorMap[className] = hexColor;
-            for (var name in loadedLayers) {
-                loadedLayers[name].layer.setStyle(f => {
-                    var cVal = loadedLayers[name].field ? f.properties[loadedLayers[name].field] : null;
-                    return { color: "#fff", weight: 0.5, fillColor: getColor(cVal), fillOpacity: 0.8 };
-                });
-            }
+        function toggleLayer(layerName, isChecked) {
+            var lObj = loadedLayers[layerName];
+            if (isChecked) map.addLayer(lObj.mainGroup);
+            else map.removeLayer(lObj.mainGroup);
+            
+            // Sync class checkboxes
+            var safeId = layerName.replace(/\s+/g, '-');
+            document.querySelectorAll(`#list-${safeId} input[type="checkbox"]`).forEach(cb => cb.checked = isChecked);
         }
 
-        function toggleSingleLayer(name, isVisible) {
-            if (isVisible) layerGroupCollection.addLayer(loadedLayers[name].layer);
-            else layerGroupCollection.removeLayer(loadedLayers[name].layer);
+        function toggleClass(layerName, className, isChecked) {
+            var cLayer = loadedLayers[layerName].classLayers[className];
+            if (isChecked) map.addLayer(cLayer);
+            else map.removeLayer(cLayer);
+            
+            // Auto check/uncheck Parent Layer
+            var safeId = layerName.replace(/\s+/g, '-');
+            var allChecked = Array.from(document.querySelectorAll(`#list-${safeId} input[type="checkbox"]`)).some(cb => cb.checked);
+            document.getElementById(`chk-${safeId}`).checked = allChecked;
         }
 
         function toggleAllLayers(show) {
             document.querySelectorAll('.layer-title input[type="checkbox"]').forEach(cb => {
-                cb.checked = show; toggleSingleLayer(cb.nextElementSibling.innerText, show);
+                if(cb.checked !== show) { cb.checked = show; cb.onchange(); }
             });
         }
-
-        function enableSwipe() {
-            var btn = document.getElementById('btn-swipe');
-            if(swipeControl) {
-                map.removeControl(swipeControl); swipeControl = null;
-                btn.innerHTML = '<i class="fas fa-columns"></i> Swipe Mode'; btn.style.background = '#9b59b6';
-                toggleAllLayers(true); return;
-            }
-            var keys = Object.keys(loadedLayers);
-            if(keys.length < 2) { alert("Cần ít nhất 2 Layers để so sánh!"); return; }
-            
-            toggleAllLayers(false);
-            layerGroupCollection.addLayer(loadedLayers[keys[0]].layer);
-            layerGroupCollection.addLayer(loadedLayers[keys[1]].layer);
-            swipeControl = L.control.sideBySide(loadedLayers[keys[0]].layer, loadedLayers[keys[1]].layer).addTo(map);
-            btn.innerHTML = '<i class="fas fa-times"></i> Thoát Swipe'; btn.style.background = '#e74c3c';
+        
+        function zoomToLayer(layerName) {
+            var bounds = L.latLngBounds();
+            Object.values(loadedLayers[layerName].classLayers).forEach(l => bounds.extend(l.getBounds()));
+            map.fitBounds(bounds);
         }
 
-        // Khởi động
+        // --- 7 & 8. CƠ CHẾ SWIPE MODE CHUYÊN NGHIỆP ---
+        function updateSwipeDropdowns(layerName) {
+            var left = document.getElementById('swipe-left');
+            var right = document.getElementById('swipe-right');
+            left.innerHTML += `<option value="${layerName}">${layerName}</option>`;
+            right.innerHTML += `<option value="${layerName}">${layerName}</option>`;
+        }
+
+        function toggleSwipe() {
+            var btn = document.getElementById('btn-swipe');
+            var leftVal = document.getElementById('swipe-left').value;
+            var rightVal = document.getElementById('swipe-right').value;
+
+            if (swipeControl) {
+                // Thoát Swipe
+                map.removeControl(swipeControl); swipeControl = null;
+                btn.innerHTML = '<i class="fas fa-columns"></i> Activate Swipe Mode'; 
+                btn.style.background = '#9b59b6';
+                toggleAllLayers(true); // Bật lại tất cả
+                return;
+            }
+
+            if (!leftVal || !rightVal || leftVal === rightVal) {
+                alert("Please select two DIFFERENT layers to compare!"); return;
+            }
+
+            // Tắt hết, chỉ bật 2 layer được chọn
+            toggleAllLayers(false);
+            map.addLayer(loadedLayers[leftVal].mainGroup);
+            map.addLayer(loadedLayers[rightVal].mainGroup);
+
+            // Khởi tạo Swipe Control
+            swipeControl = L.control.sideBySide(
+                loadedLayers[leftVal].mainGroup, 
+                loadedLayers[rightVal].mainGroup
+            ).addTo(map);
+
+            btn.innerHTML = '<i class="fas fa-times"></i> Exit Swipe Mode'; 
+            btn.style.background = '#e74c3c';
+        }
+
+        // Init
         fetchHuggingFaceData();
     </script>
 </body>
