@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Professional Cloud WebGIS</title>
+    <title>Professional WebGIS Dashboard</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -10,50 +10,57 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/gokertanrisever/leaflet-ruler@master/src/leaflet-ruler.css">
-    <script src="https://cdn.jsdelivr.net/gh/gokertanrisever/leaflet-ruler@master/src/leaflet-ruler.js"></script>
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+    <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side/leaflet-side-by-side.min.js"></script>
+    <script src="https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js"></script>
     
     <style>
         body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; display: flex; height: 100vh; overflow: hidden; background: #1e1e1e; }
         #map { flex-grow: 1; height: 100%; z-index: 1; }
-        #sidebar { width: 380px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
+        
+        /* 6. Hỗ trợ Ẩn/Hiện Sidebar trên Điện thoại */
+        #btn-toggle-sidebar { position: absolute; top: 15px; left: 15px; z-index: 2000; padding: 10px 15px; background: #2c3e50; color: white; border: 2px solid #34495e; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: 0.3s; }
+        #btn-toggle-sidebar:hover { background: #34495e; }
+        
+        #sidebar { width: 380px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.5); transition: margin-left 0.3s ease; }
+        .sidebar-collapsed { margin-left: -380px; }
+        
         .sidebar-header { padding: 15px; background: #1a252f; display: flex; justify-content: space-between; align-items: center; }
         .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
         .section-title { font-size: 1.1em; border-bottom: 2px solid #34495e; padding-bottom: 5px; margin: 20px 0 10px 0; color: #3498db; font-weight: bold; }
-        
-        .info-card { background: #34495e; padding: 15px; border-radius: 8px; font-size: 0.9em; }
         .layer-group { background: #34495e; margin-bottom: 10px; border-radius: 6px; overflow: hidden; }
         .layer-title { background: #2c3e50; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1a252f; }
-        .class-item { padding: 8px 10px 8px 30px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; border-bottom: 1px solid #2c3e50; background: #2f4356; }
-        
+        .class-item { padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; border-bottom: 1px solid #2c3e50; background: #2f4356; }
+        .color-btn { width: 22px; height: 22px; border: 2px solid #ecf0f1; border-radius: 50%; cursor: pointer; padding: 0; }
         .stat-badge { background: #1abc9c; color: white; padding: 3px 6px; border-radius: 4px; font-size: 0.8em; margin-left: 5px; }
         .control-row { display: flex; justify-content: space-between; margin-bottom: 10px; gap: 5px; }
         .btn-action { flex: 1; background: #3498db; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-action:hover { background: #2980b9; }
         
-        /* Swipe UI Styling */
         .swipe-box { background: #1a252f; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #9b59b6; }
         .swipe-select { width: 100%; padding: 5px; margin-bottom: 10px; background: #34495e; color: white; border: 1px solid #7f8c8d; border-radius: 4px; }
         
-        /* Popup Styling */
-        .leaflet-popup-content-wrapper { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); box-shadow: 0 3px 14px rgba(0,0,0,0.4); border-radius: 6px; }
+        /* 5. Popup trong suốt mờ ảo */
+        .leaflet-popup-content-wrapper { background: rgba(255, 255, 255, 0.85) !important; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-radius: 8px; }
+        .leaflet-popup-tip { background: rgba(255, 255, 255, 0.85) !important; }
         .leaflet-popup-content table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-        .leaflet-popup-content th, .leaflet-popup-content td { border: 1px solid #ddd; padding: 6px; font-size: 12px; }
-        .leaflet-popup-content th { background-color: #f2f2f2; text-align: left; color: #333; }
-        .popup-title { font-size: 14px; font-weight: bold; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 4px; margin-bottom: 5px; }
+        .leaflet-popup-content th, .leaflet-popup-content td { border: 1px solid #ddd; padding: 5px; font-size: 12px; }
+        .leaflet-popup-content th { background-color: rgba(242, 242, 242, 0.9); text-align: left; color: #333; }
+        .popup-title { font-size: 15px; font-weight: bold; color: #2c3e50; border-bottom: 2px solid #e74c3c; padding-bottom: 5px; margin-bottom: 8px; text-transform: uppercase; }
+        
+        /* Tùy chỉnh CSS của Leaflet Measure để tránh nhảy chuột */
+        .leaflet-control-measure { background: rgba(255,255,255,0.9); border-radius: 4px; }
     </style>
 </head>
 <body>
+    <button id="btn-toggle-sidebar" onclick="document.getElementById('sidebar').classList.toggle('sidebar-collapsed')">
+        <i class="fas fa-bars"></i>
+    </button>
+    
     <div id="sidebar">
-        <div class="sidebar-header"><h3 style="margin: 0;" id="w-title">Fetching Cloud Data...</h3></div>
+        <div class="sidebar-header"><h3 style="margin: 0;" id="w-title">Fetching Data...</h3></div>
         <div class="sidebar-content">
-            <div class="info-card">
-                <b>Status:</b> <span id="sync-status" style="color:#2ecc71;">Connecting to API...</span><br>
-                <i>System automatically synchronizes GeoJSON files from Cloud.</i>
-            </div>
-            
             <div class="section-title"><i class="fas fa-columns"></i> Swipe & Compare Mode</div>
             <div class="swipe-box">
                 <label style="font-size: 0.85em;">Left Map:</label>
@@ -77,30 +84,35 @@
     <script>
         const HF_REPO = "lopmaybay/lulcHaiPhongCity";
         
-        // --- 4. TÍCH HỢP BẢN ĐỒ NỀN ĐA DẠNG ---
-        var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google' });
-        var googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google' });
-        var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, attribution: 'CartoDB' });
+        // --- 4. TÍCH HỢP BẢN ĐỒ NỀN (Hybrid, OSM) ---
+        var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] });
+        var googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] });
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+        var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
         
-        var map = L.map('map', { layers: [googleSat], worldCopyJump: true }).setView([20, 105], 5);
-        L.control.layers({ "Google Satellite": googleSat, "Google Streets": googleStreets, "Dark Canvas": cartoDark }).addTo(map);
+        var map = L.map('map', { layers: [googleHybrid], worldCopyJump: true }).setView([20, 105], 5);
+        L.control.layers({ "Google Hybrid": googleHybrid, "Google Satellite": googleSat, "OpenStreetMap": osm, "Dark Canvas": cartoDark }).addTo(map);
         
-        // Công cụ đo chính xác (Leaflet Ruler)
-        L.control.ruler({ position: 'topright', lengthUnit: { display: 'm', decimal: 2 }, areaUnit: { display: 'ha', decimal: 4 } }).addTo(map);
+        // --- 5. THANH TỶ LỆ ---
+        L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+        
+        // --- 8. CÔNG CỤ ĐO (Đo cạnh, đo diện tích đa giác) ---
+        var measureControl = new L.Control.Measure({ position: 'topright', primaryLengthUnit: 'meters', secondaryLengthUnit: 'kilometers', primaryAreaUnit: 'hectares', activeColor: '#e74c3c', completedColor: '#9b59b6' });
+        measureControl.addTo(map);
 
         var loadedLayers = {};
         var globalBounds = L.latLngBounds();
         var swipeControl = null;
+        var globalColorMap = {}; // Lưu trữ trạng thái màu do người dùng đổi
 
-        // --- 2. THUẬT TOÁN HASH COLOR (Đồng bộ màu các class giống nhau giữa các năm) ---
-        function hashCode(str) {
-            var hash = 0; for (var i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-            return hash;
-        }
-        function getColor(className) {
-            if (!className || className === "Unclassified") return "#7f8c8d";
-            const colors = ["#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#fffac8", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075", "#a9a9a9"];
-            return colors[Math.abs(hashCode(className)) % colors.length];
+        // 1. Thuật toán Lấy Màu Ưu Tiên (Custom -> QGIS -> Hash)
+        function getFeatureColor(f, className) {
+            if (globalColorMap[className] && globalColorMap[className].isCustom) return globalColorMap[className].color;
+            if (f.properties._QGIS_Color) {
+                if (!globalColorMap[className]) globalColorMap[className] = { color: f.properties._QGIS_Color, isCustom: false };
+                return f.properties._QGIS_Color;
+            }
+            return "#3388ff"; // Fallback
         }
 
         async function fetchHuggingFaceData() {
@@ -109,24 +121,14 @@
                 const files = await apiRes.json();
                 const geojsonFiles = files.filter(f => f.path.endsWith('.geojson') || f.path.endsWith('.json'));
                 
-                if(geojsonFiles.length === 0) {
-                    document.getElementById('sync-status').innerText = "No GeoJSON files found!";
-                    document.getElementById('sync-status').style.color = "#e74c3c"; return;
-                }
-                document.getElementById('sync-status').innerText = `${geojsonFiles.length} Layers Found & Synced!`;
-                
                 for (let file of geojsonFiles) {
                     const rawUrl = `https://huggingface.co/datasets/${HF_REPO}/resolve/main/${file.path}`;
-                    // Tên layer sạch đẹp
-                    const layerName = file.path.replace('.geojson', '').replace('.json', '').replace(/_/g, ' ');
+                    const layerName = file.path.replace('.geojson', '').replace(/_/g, ' ');
                     await processLayer(rawUrl, layerName);
                 }
                 map.fitBounds(globalBounds);
                 document.getElementById('w-title').innerText = "WebGIS Dashboard";
-            } catch(e) {
-                document.getElementById('sync-status').innerText = "API Connection Failed!";
-                document.getElementById('sync-status').style.color = "#e74c3c";
-            }
+            } catch(e) { alert("Lỗi kết nối API Hugging Face!"); }
         }
 
         async function processLayer(url, layerName) {
@@ -135,23 +137,26 @@
             
             let fieldName = null;
             if (data.features.length > 0) {
-                const candidates = ["Class_Name", "MacroClass", "Class", "Name", "Ten"];
+                const candidates = ["Class_Name", "MacroClass", "Class", "Name", "Ten", "Class_ID"];
                 for (let c of candidates) { if (data.features[0].properties[c] !== undefined) { fieldName = c; break; } }
             }
 
-            // Tách Features theo từng Class để có thể bật tắt riêng lẻ
             var classFeatures = {};
             var stats = { total_area: 0 };
             
             data.features.forEach(f => {
                 var area = f.properties.Area_ha || 0;
                 stats.total_area += area;
-                var cVal = fieldName ? f.properties[fieldName] : "Unclassified";
+                var cVal = fieldName ? String(f.properties[fieldName]) : "Polygon";
                 
-                if (!classFeatures[cVal]) classFeatures[cVal] = { area: 0, count: 0, features: [] };
+                if (!classFeatures[cVal]) classFeatures[cVal] = { area: 0, features: [] };
                 classFeatures[cVal].features.push(f);
                 classFeatures[cVal].area += area;
-                classFeatures[cVal].count++;
+                
+                // Khởi tạo màu QGIS vào từ điển dùng chung
+                if (!globalColorMap[cVal] && f.properties._QGIS_Color) {
+                    globalColorMap[cVal] = { color: f.properties._QGIS_Color, isCustom: false };
+                }
             });
 
             var mainLayerGroup = L.layerGroup();
@@ -159,16 +164,26 @@
 
             Object.keys(classFeatures).forEach(c => {
                 var cLayer = L.geoJSON(classFeatures[c].features, {
-                    style: function() { return { color: "#fff", weight: 0.5, fillColor: getColor(c), fillOpacity: 0.8 }; },
+                    style: function(f) { return { color: "#fff", weight: 0.5, fillColor: getFeatureColor(f, c), fillOpacity: 0.85 }; },
                     onEachFeature: function(f, layer) {
-                        // --- 1. HIỆN THÔNG TIN POPUP CHUẨN ---
-                        let popupHTML = `<div class='popup-title'>Class: ${c}</div><table>`;
-                        for(let p in f.properties) popupHTML += `<tr><th>${p}</th><td>${f.properties[p]}</td></tr>`;
+                        // --- 3 & 7. HIỆN TÊN LAYER TRONG POPUP VÀ TỰ ĐỘNG MỞ KHI LƯỚT CHUỘT ---
+                        let popupHTML = `<div class='popup-title'><i class="fas fa-layer-group"></i> ${layerName}</div>`;
+                        popupHTML += `<b>Class: ${c}</b><table>`;
+                        for(let p in f.properties) {
+                            if(p !== "_QGIS_Color") popupHTML += `<tr><th>${p}</th><td>${f.properties[p]}</td></tr>`;
+                        }
                         popupHTML += "</table>";
-                        layer.bindPopup(popupHTML);
+                        layer.bindPopup(popupHTML, { closeButton: false, offset: L.point(0, -10) }); // Tắt nút X cho gọn
                         
-                        layer.on('mouseover', function(e) { this.setStyle({weight: 3, color: '#f39c12'}); });
-                        layer.on('mouseout', function(e) { cLayer.resetStyle(this); });
+                        layer.on('mouseover', function(e) { 
+                            this.setStyle({weight: 4, color: '#ff0000', fillOpacity: 1}); // Sáng viền ĐỎ
+                            this.bringToFront();
+                            this.openPopup(); 
+                        });
+                        layer.on('mouseout', function(e) { 
+                            cLayer.resetStyle(this); 
+                            this.closePopup(); 
+                        });
                     }
                 });
                 classLeafletLayers[c] = cLayer;
@@ -178,19 +193,16 @@
             mainLayerGroup.addTo(map);
             globalBounds.extend(L.geoJSON(data).getBounds());
 
-            loadedLayers[layerName] = { mainGroup: mainLayerGroup, classLayers: classLeafletLayers };
-            
-            // Thêm vào UI & Swipe Dropdowns
+            loadedLayers[layerName] = { mainGroup: mainLayerGroup, classLayers: classLeafletLayers, field: fieldName };
             buildLayerUI(layerName, classFeatures, stats.total_area);
             updateSwipeDropdowns(layerName);
         }
 
-        // --- 3. GIAO DIỆN BẬT TẮT TỪNG CLASS ---
+        // --- GIAO DIỆN CÓ CỤC ĐỔI MÀU ---
         function buildLayerUI(layerName, classFeatures, totalArea) {
             var container = document.getElementById('layer-container');
             var grp = document.createElement('div');
             grp.className = 'layer-group';
-            
             var safeId = layerName.replace(/\s+/g, '-');
             
             let html = `
@@ -201,16 +213,16 @@
                     </div>
                     <div><span class="stat-badge">${totalArea.toFixed(1)} ha</span></div>
                 </div>
-                <div id="list-${safeId}">
-            `;
+                <div id="list-${safeId}">`;
             
             Object.keys(classFeatures).forEach(c => {
                 let cArea = classFeatures[c].area;
+                let cColor = globalColorMap[c] ? globalColorMap[c].color : "#3388ff";
                 html += `
                     <div class="class-item">
                         <div>
-                            <input type="checkbox" checked onchange="toggleClass('${layerName}', '${c}', this.checked)" style="vertical-align:middle;">
-                            <span style="display:inline-block; width:12px; height:12px; background:${getColor(c)}; border-radius:50%; margin:0 5px;"></span>
+                            <input type="checkbox" checked onchange="toggleClass('${layerName}', '${c}', this.checked)" style="vertical-align:middle; margin-right:5px;">
+                            <input type="color" class="color-btn" value="${cColor}" onchange="changeColor('${c}', this.value)" style="margin-right:8px; vertical-align:middle;">
                             ${c}
                         </div>
                         <span class="stat-badge" style="background:none; border:1px solid #1abc9c; color:#1abc9c;">${cArea.toFixed(1)} ha</span>
@@ -221,25 +233,27 @@
             container.appendChild(grp);
         }
 
+        // 1. Cập nhật màu do người dùng chọn trên Web
+        function changeColor(className, hexColor) {
+            globalColorMap[className] = { color: hexColor, isCustom: true };
+            for (var name in loadedLayers) {
+                if (loadedLayers[name].classLayers[className]) {
+                    loadedLayers[name].classLayers[className].setStyle(f => { return { fillColor: hexColor }; });
+                }
+            }
+        }
+
         function toggleLayer(layerName, isChecked) {
-            var lObj = loadedLayers[layerName];
-            if (isChecked) map.addLayer(lObj.mainGroup);
-            else map.removeLayer(lObj.mainGroup);
-            
-            // Sync class checkboxes
+            if (isChecked) map.addLayer(loadedLayers[layerName].mainGroup);
+            else map.removeLayer(loadedLayers[layerName].mainGroup);
             var safeId = layerName.replace(/\s+/g, '-');
             document.querySelectorAll(`#list-${safeId} input[type="checkbox"]`).forEach(cb => cb.checked = isChecked);
         }
 
         function toggleClass(layerName, className, isChecked) {
             var cLayer = loadedLayers[layerName].classLayers[className];
-            if (isChecked) map.addLayer(cLayer);
-            else map.removeLayer(cLayer);
-            
-            // Auto check/uncheck Parent Layer
-            var safeId = layerName.replace(/\s+/g, '-');
-            var allChecked = Array.from(document.querySelectorAll(`#list-${safeId} input[type="checkbox"]`)).some(cb => cb.checked);
-            document.getElementById(`chk-${safeId}`).checked = allChecked;
+            if (isChecked) loadedLayers[layerName].mainGroup.addLayer(cLayer);
+            else loadedLayers[layerName].mainGroup.removeLayer(cLayer);
         }
 
         function toggleAllLayers(show) {
@@ -247,55 +261,42 @@
                 if(cb.checked !== show) { cb.checked = show; cb.onchange(); }
             });
         }
-        
         function zoomToLayer(layerName) {
             var bounds = L.latLngBounds();
             Object.values(loadedLayers[layerName].classLayers).forEach(l => bounds.extend(l.getBounds()));
             map.fitBounds(bounds);
         }
 
-        // --- 7 & 8. CƠ CHẾ SWIPE MODE CHUYÊN NGHIỆP ---
+        // --- 2. LỖI THOÁT SWIPE ĐÃ FIX TRUYỆT ĐỂ ---
         function updateSwipeDropdowns(layerName) {
-            var left = document.getElementById('swipe-left');
-            var right = document.getElementById('swipe-right');
-            left.innerHTML += `<option value="${layerName}">${layerName}</option>`;
-            right.innerHTML += `<option value="${layerName}">${layerName}</option>`;
+            document.getElementById('swipe-left').innerHTML += `<option value="${layerName}">${layerName}</option>`;
+            document.getElementById('swipe-right').innerHTML += `<option value="${layerName}">${layerName}</option>`;
         }
 
         function toggleSwipe() {
             var btn = document.getElementById('btn-swipe');
-            var leftVal = document.getElementById('swipe-left').value;
-            var rightVal = document.getElementById('swipe-right').value;
-
             if (swipeControl) {
-                // Thoát Swipe
-                map.removeControl(swipeControl); swipeControl = null;
+                map.removeControl(swipeControl); 
+                swipeControl = null;
                 btn.innerHTML = '<i class="fas fa-columns"></i> Activate Swipe Mode'; 
                 btn.style.background = '#9b59b6';
-                toggleAllLayers(true); // Bật lại tất cả
+                toggleAllLayers(true); // Tự động bật lại toàn bộ layer khi thoát
                 return;
             }
 
-            if (!leftVal || !rightVal || leftVal === rightVal) {
-                alert("Please select two DIFFERENT layers to compare!"); return;
-            }
+            var leftVal = document.getElementById('swipe-left').value;
+            var rightVal = document.getElementById('swipe-right').value;
+            if (!leftVal || !rightVal || leftVal === rightVal) { alert("Please select two DIFFERENT layers to compare!"); return; }
 
-            // Tắt hết, chỉ bật 2 layer được chọn
-            toggleAllLayers(false);
+            toggleAllLayers(false); // Tắt rác
             map.addLayer(loadedLayers[leftVal].mainGroup);
             map.addLayer(loadedLayers[rightVal].mainGroup);
-
-            // Khởi tạo Swipe Control
-            swipeControl = L.control.sideBySide(
-                loadedLayers[leftVal].mainGroup, 
-                loadedLayers[rightVal].mainGroup
-            ).addTo(map);
-
+            swipeControl = L.control.sideBySide(loadedLayers[leftVal].mainGroup, loadedLayers[rightVal].mainGroup).addTo(map);
+            
             btn.innerHTML = '<i class="fas fa-times"></i> Exit Swipe Mode'; 
             btn.style.background = '#e74c3c';
         }
 
-        // Init
         fetchHuggingFaceData();
     </script>
 </body>
