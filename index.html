@@ -12,6 +12,7 @@
     <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side/leaflet-side-by-side.min.js"></script>
+    <script src="https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js"></script>
     <script src="config.js"></script>
     <style>
         body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; display: flex; height: 100vh; overflow: hidden; background: #1e1e1e; }
@@ -43,6 +44,14 @@
         .custom-tooltip { background: rgba(0,0,0,0.8); color: white; border: none; border-radius: 4px; font-family: 'Roboto'; font-size: 13px; }
         .leaflet-tooltip-left::before { border-left-color: rgba(0,0,0,0.8); }
         .leaflet-tooltip-right::before { border-right-color: rgba(0,0,0,0.8); }
+        
+        /* Popup Trong Suốt Mờ */
+        .leaflet-popup-content-wrapper { 
+            background: rgba(255, 255, 255, 0.9); 
+            backdrop-filter: blur(5px); 
+            box-shadow: 0 3px 14px rgba(0,0,0,0.4); 
+        }
+        .leaflet-popup-tip { background: rgba(255, 255, 255, 0.9); }
 
         @media (max-width: 768px) {
             #sidebar { position: absolute; height: 100%; transform: translateX(-100%); }
@@ -117,6 +126,101 @@
         var loadedLayers = {};
         var globalBounds = L.latLngBounds();
         var swipeControl = null;
+        var layerGroupCollection = L.featureGroup().addTo(map); // Chứa toàn bộ layer để dùng leaflet-pip
+
+        // Vô hiệu hóa Popup mặc định của L.geoJSON
+        var layerPromises = mapConfig.layers.map((cfg, idx) => {
+            return fetch(cfg.file).then(res => res.json()).then(data => {
+                var stats = calculateStats(data, cfg.field);
+                
+                var geoLayer = L.geoJSON(data, {
+                    style: function(f) { return styleFeature(f, cfg.field); },
+                    // KHÔNG dùng onEachFeature để bindPopup nữa, chỉ dùng tooltip
+                    onEachFeature: function (feature, layer) {
+                        var cVal = cfg.field ? feature.properties[cfg.field] : "Polygon";
+                        layer.bindTooltip(`<b>${cVal}</b>`, { className: 'custom-tooltip', sticky: true });
+                        
+                        layer.on({
+                            mouseover: function(e) { e.target.setStyle({ weight: 3, color: '#f39c12', fillOpacity: 0.9 }); },
+                            mouseout: function(e) { geoLayer.resetStyle(e.target); }
+                        });
+                        
+                        // Lưu thông tin gốc vào layer để truy xuất
+                        layer._sourceLayerName = cfg.name;
+                    }
+                });
+                
+                layerGroupCollection.addLayer(geoLayer);
+                loadedLayers[cfg.name] = { layer: geoLayer, cfg: cfg, stats: stats };
+                globalBounds.extend(geoLayer.getBounds());
+                buildLayerUI(cfg.name);
+            });
+        });
+
+        Promise.all(layerPromises).then(() => { map.fitBounds(globalBounds); });
+
+        // TÍNH NĂNG POPUP XUYÊN NHIỀU LAYER (Point in Polygon)
+        map.on('click', function(e) {
+            // Lấy tất cả polygon chứa điểm click
+            var results = leafletPip.pointInLayer(e.latlng, layerGroupCollection);
+            
+            if (results.length > 0) {
+                var html = "<div style='max-height: 250px; overflow-y: auto;'>";
+                html += "<h4 style='margin-top:0; border-bottom: 1px solid #ccc; padding-bottom: 5px;'>Layer Info (" + results.length + ")</h4>";
+                
+                // Lặp qua các kết quả (từ trên xuống dưới)
+                results.forEach(res => {
+                    var layerName = res._sourceLayerName || "Unknown Layer";
+                    html += `<b style='color:#2c3e50;'>${layerName}</b>`;
+                    html += "<table style='width: 100%; border-collapse: collapse; margin-bottom: 10px;' border='1'>";
+                    for (var p in res.feature.properties) { 
+                        html += `<tr><td style='padding:4px; font-size:12px;'><b>${p}</b></td><td style='padding:4px; font-size:12px;'>${res.feature.properties[p]}</td></tr>`; 
+                    }
+                    html += "</table>";
+                });
+                html += "</div>";
+                
+                L.popup().setLatLng(e.latlng).setContent(html).openOn(map);
+            }
+        });
+
+        function toggleSingleLayer(name, isVisible) {
+            if (isVisible) layerGroupCollection.addLayer(loadedLayers[name].layer);
+            else layerGroupCollection.removeLayer(loadedLayers[name].layer);
+        }
+
+        // CHẾ ĐỘ SWIPE (BẬT / TẮT)
+        function enableSwipe() {
+            var btn = document.getElementById('btn-swipe');
+            
+            if(swipeControl) {
+                // Thoát Swipe
+                map.removeControl(swipeControl);
+                swipeControl = null;
+                btn.innerHTML = '<i class="fas fa-columns"></i> Swipe Mode';
+                btn.style.background = '#9b59b6';
+                
+                // Trả lại toàn bộ layer
+                toggleAllLayers(true);
+                return;
+            }
+            
+            var keys = Object.keys(loadedLayers);
+            if(keys.length < 2) { alert("Cần ít nhất 2 Layers để so sánh!"); return; }
+            
+            var leftLayer = loadedLayers[keys[0]].layer;
+            var rightLayer = loadedLayers[keys[1]].layer;
+            
+            toggleAllLayers(false);
+            layerGroupCollection.addLayer(leftLayer);
+            layerGroupCollection.addLayer(rightLayer);
+            
+            swipeControl = L.control.sideBySide(leftLayer, rightLayer).addTo(map);
+            
+            // Đổi trạng thái UI
+            btn.innerHTML = '<i class="fas fa-times"></i> Thoát Swipe';
+            btn.style.background = '#e74c3c';
+        }
 
         // Trích xuất thống kê từ dữ liệu
         function calculateStats(data, field) {
@@ -138,38 +242,6 @@
             var cVal = fldName ? feature.properties[fldName] : null;
             return { color: "#ffffff", weight: 0.5, fillColor: mapConfig.colors[cVal] || "#3388ff", fillOpacity: 0.75 };
         }
-
-        // Tải dữ liệu động
-        var layerPromises = mapConfig.layers.map((cfg, idx) => {
-            return fetch(cfg.file).then(res => res.json()).then(data => {
-                var stats = calculateStats(data, cfg.field);
-                
-                var geoLayer = L.geoJSON(data, {
-                    style: function(f) { return styleFeature(f, cfg.field); },
-                    onEachFeature: function (feature, layer) {
-                        // Tooltip siêu nhanh khi lướt chuột
-                        var cVal = cfg.field ? feature.properties[cfg.field] : "Polygon";
-                        var area = feature.properties.Area_ha ? feature.properties.Area_ha.toFixed(2) + " ha" : "";
-                        layer.bindTooltip(`<b>${cVal}</b><br>${area}`, { className: 'custom-tooltip', sticky: true });
-                        
-                        layer.on({
-                            mouseover: function(e) { e.target.setStyle({ weight: 3, color: '#f39c12', fillOpacity: 0.9 }); e.target.bringToFront(); },
-                            mouseout: function(e) { geoLayer.resetStyle(e.target); }
-                        });
-                        
-                        var popup = "<table style='width: 100%; border-collapse: collapse;' border='1'>";
-                        for (var p in feature.properties) { popup += `<tr><td style='padding:5px;'><b>${p}</b></td><td style='padding:5px;'>${feature.properties[p]}</td></tr>`; }
-                        layer.bindPopup(popup + "</table>");
-                    }
-                }).addTo(map);
-                
-                loadedLayers[cfg.name] = { layer: geoLayer, cfg: cfg, stats: stats };
-                globalBounds.extend(geoLayer.getBounds());
-                buildLayerUI(cfg.name);
-            });
-        });
-
-        Promise.all(layerPromises).then(() => { map.fitBounds(globalBounds); });
 
         // Dựng UI Quản lý Layer
         function buildLayerUI(name) {
@@ -223,11 +295,6 @@
             }
         }
 
-        function toggleSingleLayer(name, isVisible) {
-            if (isVisible) map.addLayer(loadedLayers[name].layer);
-            else map.removeLayer(loadedLayers[name].layer);
-        }
-
         function toggleAllLayers(show) {
             var checkboxes = document.querySelectorAll('.layer-title input[type="checkbox"]');
             checkboxes.forEach(cb => { 
@@ -235,29 +302,6 @@
                 var name = cb.nextElementSibling.innerText;
                 toggleSingleLayer(name, show);
             });
-        }
-
-        // Chế độ Swipe (So sánh 2 Layer)
-        function enableSwipe() {
-            var keys = Object.keys(loadedLayers);
-            if(keys.length < 2) { alert("Cần ít nhất 2 Layers để so sánh!"); return; }
-            
-            if(swipeControl) {
-                map.removeControl(swipeControl);
-                swipeControl = null;
-                alert("Swipe mode disabled.");
-                return;
-            }
-            
-            var leftLayer = loadedLayers[keys[0]].layer;
-            var rightLayer = loadedLayers[keys[1]].layer;
-            
-            // Bật 2 layer này, tắt các layer khác
-            toggleAllLayers(false);
-            map.addLayer(leftLayer); map.addLayer(rightLayer);
-            
-            swipeControl = L.control.sideBySide(leftLayer, rightLayer).addTo(map);
-            alert(`Swipe Mode: Trái [${keys[0]}] - Phải [${keys[1]}]`);
         }
     </script>
 </body>
