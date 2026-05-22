@@ -1,6 +1,6 @@
 const mapConfig = {
     "title": "OBIA Land Cover Classification",
-    "author": "Pham Dang hien",
+    "author": "Pham Hien",
     "contact": "contact@example.com",
     "colors": {
         "Building": "#4CAF50",
